@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>番茄定时上传助手</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <h1>📚 番茄定时上传助手</h1>
+  <span id="conn">连接中…</span>
+</header>
+<nav>
+  <button data-tab="tab-config" class="active">设置</button>
+  <button data-tab="tab-parse">解析</button>
+  <button data-tab="tab-schedule">排期</button>
+  <button data-tab="tab-upload">上传</button>
+</nav>
+<main>
+
+  <!-- 设置 -->
+  <section id="tab-config" class="tab active">
+    <div class="card">
+      <h2>基础配置</h2>
+      <div class="grid">
+        <div class="field" style="grid-column: 1 / -1;">
+          <label>小说正文来源（支持整本 TXT，或每章一个 TXT 的正文文件夹）</label>
+          <div class="path-picker">
+            <input type="text" id="novelFile" placeholder="例如 D:/小说/正文 或 D:/小说/整本.txt">
+            <button class="btn ghost compact" type="button" id="chooseNovelFolder">选择正文文件夹</button>
+            <button class="btn ghost compact" type="button" id="chooseNovelFile">选择整本 TXT</button>
+          </div>
+          <p class="muted source-help">分章模式按文件名中的数字顺序读取，如 第2章 会排在第10章之前；正文下的子文件夹会作为分卷。</p>
+        </div>
+        <div class="field" style="grid-column: 1 / -1;">
+          <label>上传页网址（新建章节页）</label>
+          <input type="text" id="uploadUrl" placeholder="https://.../createChapter">
+        </div>
+        <div class="field"><label>每日字数上限</label><input type="number" id="dailyWordLimit" min="1"></div>
+        <div class="field"><label>从第几章开始上传</label><input type="number" id="startChapter" min="1" placeholder="例如 61"></div>
+        <div class="field"><label>每天最多发布几章</label><input type="number" id="dailyChapterLimit" min="1" max="20" placeholder="例如 3"></div>
+        <div class="field"><label>开始发布日期</label><input type="date" id="startDate"></div>
+        <div class="field"><label>每日发布时间点</label><input type="time" id="dailyPublishTime"></div>
+        <div class="field"><label>章间隔（分钟）</label><input type="number" id="chapterIntervalMinutes" min="0"></div>
+        <div class="field"><label>上传时章间等待（秒）</label><input type="number" id="uploadDelaySeconds" min="0"></div>
+        <div class="field"><label><input type="checkbox" id="stripMetaLines"> 去除「卷X…待续」预告行</label></div>
+        <div class="field"><label><input type="checkbox" id="headless"> 无头模式（不显示浏览器）</label></div>
+      </div>
+      <div class="btns">
+        <button class="btn" id="saveCfg">保存配置</button>
+        <button class="btn ghost" id="btnLogin">登录（打开浏览器，登录后关闭窗口）</button>
+      </div>
+    </div>
+    <div class="card">
+      <h2>上传页面识别</h2>
+      <p class="muted">下面的选择器无需手动填写，程序会自动识别番茄的标题、正文、下一步和定时发布控件。</p>
+      <div class="grid sel-grid" style="display:none;">
+        <div class="field"><label>标题输入框</label><input type="text" id="sel_titleInput"></div>
+        <div class="field"><label>正文编辑器</label><input type="text" id="sel_contentEditor"></div>
+        <div class="field"><label>定时发布开关</label><input type="text" id="sel_scheduleRadio"></div>
+        <div class="field"><label>定时日期输入</label><input type="text" id="sel_scheduleDateInput"></div>
+        <div class="field"><label>定时时间输入</label><input type="text" id="sel_scheduleTimeInput"></div>
+        <div class="field"><label>保存/发布按钮</label><input type="text" id="sel_saveButton"></div>
+        <div class="field"><label>成功提示元素</label><input type="text" id="sel_successIndicator"></div>
+      </div>
+      <div class="btns">
+        <button class="btn ghost" id="btnInspect">🔍 识别上传页元素（自动抓取）</button>
+        <span class="muted" id="inspectLoading"></span>
+      </div>
+      <pre id="inspectResult" style="background:#1e2229;color:#d7dae0;font-size:12px;padding:12px;border-radius:8px;max-height:360px;overflow:auto;margin-top:10px;white-space:pre-wrap;display:none;"></pre>
+      <p class="note">请先点击“登录”完成登录，再点击“识别上传页元素”确认页面可访问。上传时会按照生成的排期自动填写每章标题、正文和发布时间。</p>
+    </div>
+  </section>
+
+  <!-- 解析 -->
+  <section id="tab-parse" class="tab">
+    <div class="card">
+      <h2>解析小说</h2>
+      <p class="muted" id="parseInfo">点击按钮解析当前设置里的整本 TXT 或分章正文文件夹。</p>
+      <div class="btns"><button class="btn" id="btnParse">解析小说</button></div>
+      <div id="parseResult"></div>
+    </div>
+  </section>
+
+  <!-- 排期 -->
+  <section id="tab-schedule" class="tab">
+    <div class="card">
+      <h2>生成发布排期</h2>
+      <p class="muted">规则：从指定章节开始，按“每天最多发布几章”和每日字数上限排期。每天从“每日发布时间点”起，按“章间隔”依次排列。</p>
+      <div class="btns"><button class="btn" id="btnSchedule">生成排期</button></div>
+      <div id="scheduleSummary"></div>
+      <div id="scheduleList"></div>
+    </div>
+  </section>
+
+  <!-- 上传 -->
+  <section id="tab-upload" class="tab">
+    <div class="card">
+      <h2>上传控制</h2>
+      <div id="waitingBox" style="display:none;background:#fff7e8;border:1px solid #ffe3b3;border-radius:8px;padding:12px 16px;margin-bottom:10px;">
+        <div id="waitingMsg" style="font-size:13px;line-height:1.6;"></div>
+        <button class="btn" id="btnContinue" style="margin-top:8px;">✅ 已建好，继续</button>
+      </div>
+      <div id="upStatus" class="muted">未开始</div>
+      <div class="progress"><div id="upBar"></div></div>
+      <div id="upCount" class="muted"></div>
+      <div class="btns">
+        <button class="btn" id="btnStart">开始上传</button>
+        <button class="btn ghost" id="btnStop">停止（当前章完成后停）</button>
+      </div>
+      <p class="note">开始上传前请先在「设置」保存配置。上传会复用登录时打开的内置浏览器，并自动操作后台页面。</p>
+    </div>
+    <div class="card">
+      <h2>运行日志</h2>
+      <div id="log"></div>
+    </div>
+  </section>
+
+</main>
+<script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,15 @@
+{
+  "novelFile": "",
+  "uploadUrl": "",
+  "dailyWordLimit": 10000,
+  "startDate": "",
+  "dailyPublishTime": "07:00",
+  "chapterIntervalMinutes": 10,
+  "dailyChapterLimit": 3,
+  "startChapter": 1,
+  "uploadDelaySeconds": 4,
+  "stripMetaLines": true,
+  "headless": false,
+  "userDataDir": "profile",
+  "selectors": {}
+}

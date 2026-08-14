@@ -1,0 +1,28 @@
+# Dependencies and bundled runtimes
+node_modules/
+node/
+browsers/
+
+# Local browser profiles and authentication data
+profile/
+profile-*/
+
+# Private configuration and generated state
+config.json
+state.json
+schedule.json
+*.log
+
+# Local backups and temporary files
+backup-before-*/
+backups/
+.tmp-*/
+tmp/
+temp/
+
+# Editor and operating system files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
