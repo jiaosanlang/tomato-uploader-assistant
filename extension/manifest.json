@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Tomato Uploader Assistant",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "在 Chrome 侧边栏导入章节、生成番茄发布排期，并辅助填写作者后台页面。",
   "permissions": ["activeTab", "sidePanel", "storage"],
   "host_permissions": ["https://fanqienovel.com/*", "https://writer.fanqienovel.com/*"],

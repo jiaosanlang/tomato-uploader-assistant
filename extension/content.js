@@ -18,7 +18,8 @@
     const editor = first(['.ProseMirror[contenteditable="true"]', '[contenteditable="true"]', 'textarea']);
     if (!title || !editor) return { ok: false, error: '当前页面没有识别到标题输入框或正文编辑器。', inspection: inspect() };
     if (serial && chapter.number) setValue(serial, chapter.number);
-    setValue(title, chapter.title || '');
+    const cleanTitle = String(chapter.title || '').replace(/^第\s*([0-9０-９一二三四五六七八九十百千万零〇两]+)\s*[章节回]\s*/, '').trim();
+    setValue(title, cleanTitle);
     if (editor.isContentEditable) {
       editor.focus();
       const selection = window.getSelection(); const range = document.createRange();
@@ -26,7 +27,7 @@
       document.execCommand('insertText', false, chapter.content || '');
       editor.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText' }));
     } else setValue(editor, chapter.content || '');
-    return { ok: true, title: title.value || chapter.title, contentLength: (editor.innerText || editor.value || '').trim().length, message: '已填写当前章节，请在页面中检查内容后手动点击下一步。' };
+    return { ok: true, title: title.value || cleanTitle, contentLength: (editor.innerText || editor.value || '').trim().length, message: '已填写当前章节，请在页面中检查内容后手动点击下一步。' };
   }
   chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     if (message?.type === 'inspect-page') sendResponse(inspect());
@@ -34,4 +35,3 @@
     return true;
   });
 })();
-
