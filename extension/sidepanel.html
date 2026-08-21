@@ -19,14 +19,14 @@
     </section>
     <section id="sourceView" class="view active">
       <div class="section-heading"><div><span class="kicker">SOURCE</span><h2>先把正文放进来</h2></div><span id="chapterCount" class="count-pill">0 章</span></div>
-      <div class="dropzone"><span class="drop-icon">↗</span><strong>选择 TXT 文件或正文目录</strong><small>内容只在当前浏览器内处理，不会上传到其他服务器。</small><div class="source-buttons"><label for="novelFiles">选择 TXT<input id="novelFiles" type="file" accept=".txt,text/plain" multiple></label><label for="novelDirectory">选择目录<input id="novelDirectory" type="file" accept=".txt,text/plain" multiple webkitdirectory></label></div></div>
+      <div class="dropzone"><span class="drop-icon">↗</span><strong>选择 TXT 文件或正文目录</strong><small>逐个读取，超过大小限制会自动停止，避免浏览器占满内存。</small><div class="source-buttons"><label for="novelFiles">选择 TXT<input id="novelFiles" type="file" accept=".txt,text/plain" multiple></label><button id="directoryButton" type="button">选择目录</button></div></div>
       <div class="mini-grid">
         <label>每日字数上限<input id="dailyWordLimit" type="number" min="1" value="10000"></label>
         <label>每日最多几章<input id="dailyChapterLimit" type="number" min="1" max="20" value="3"></label>
         <label>开始日期<input id="startDate" type="date"></label>
         <label>首章时间<input id="dailyPublishTime" type="time" value="07:00"></label>
       </div>
-      <button id="parseButton" class="button primary" type="button">解析章节</button><p id="sourceStatus" class="status-line">还没有选择正文。</p><div id="chapterPreview" class="preview-list"></div>
+      <button id="cancelButton" class="button secondary" type="button" hidden>停止读取</button><p id="sourceStatus" class="status-line">还没有选择正文。</p><div id="chapterPreview" class="preview-list"></div>
     </section>
     <section id="scheduleView" class="view">
       <div class="section-heading"><div><span class="kicker">SCHEDULE</span><h2>发布节奏</h2></div><span id="dayCount" class="count-pill">0 天</span></div>
