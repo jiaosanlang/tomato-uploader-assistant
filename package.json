@@ -1,12 +1,12 @@
 {
   "name": "tomato-uploader-assistant",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "description": "本地运行的番茄小说章节上传助手，支持 TXT 解析、发布排期和断点续传",
   "scripts": {
     "start": "node server.mjs",
-    "check": "node --check server.mjs && node --check engine.mjs && node --check parse.js && node --check schedule.js && node --check web/app.js"
+    "check": "node --check server.mjs && node --check engine.mjs && node --check parse.js && node --check schedule.js && node --check web/app.js && node --check extension/background.js && node --check extension/content.js && node --check extension/sidepanel.js"
   },
   "repository": {
     "type": "git",

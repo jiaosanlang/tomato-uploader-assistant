@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tomato Uploader Assistant</title>
+  <link rel="stylesheet" href="sidepanel.css">
+</head>
+<body>
+  <header class="masthead">
+    <div><p class="eyebrow">WRITER DESK / 0.2</p><h1>番茄上传助手</h1><p class="subhead">把章节整理好，再交给页面完成最后一步。</p></div>
+    <span id="connectionDot" class="connection-dot" title="等待当前页面"></span>
+  </header>
+  <main>
+    <section class="rail" aria-label="使用流程">
+      <div class="rail-step active" data-step="source"><span>01</span><b>章节</b></div><div class="rail-line"></div>
+      <div class="rail-step" data-step="schedule"><span>02</span><b>排期</b></div><div class="rail-line"></div>
+      <div class="rail-step" data-step="page"><span>03</span><b>页面</b></div>
+    </section>
+    <section id="sourceView" class="view active">
+      <div class="section-heading"><div><span class="kicker">SOURCE</span><h2>先把正文放进来</h2></div><span id="chapterCount" class="count-pill">0 章</span></div>
+      <div class="dropzone"><span class="drop-icon">↗</span><strong>选择 TXT 文件或正文目录</strong><small>内容只在当前浏览器内处理，不会上传到其他服务器。</small><div class="source-buttons"><label for="novelFiles">选择 TXT<input id="novelFiles" type="file" accept=".txt,text/plain" multiple></label><label for="novelDirectory">选择目录<input id="novelDirectory" type="file" accept=".txt,text/plain" multiple webkitdirectory></label></div></div>
+      <div class="mini-grid">
+        <label>每日字数上限<input id="dailyWordLimit" type="number" min="1" value="10000"></label>
+        <label>每日最多几章<input id="dailyChapterLimit" type="number" min="1" max="20" value="3"></label>
+        <label>开始日期<input id="startDate" type="date"></label>
+        <label>首章时间<input id="dailyPublishTime" type="time" value="07:00"></label>
+      </div>
+      <button id="parseButton" class="button primary" type="button">解析章节</button><p id="sourceStatus" class="status-line">还没有选择正文。</p><div id="chapterPreview" class="preview-list"></div>
+    </section>
+    <section id="scheduleView" class="view">
+      <div class="section-heading"><div><span class="kicker">SCHEDULE</span><h2>发布节奏</h2></div><span id="dayCount" class="count-pill">0 天</span></div>
+      <div id="scheduleSummary" class="summary-card empty">解析章节后，这里会出现排期。</div><div id="scheduleList" class="schedule-list"></div><button id="scheduleButton" class="button primary" type="button">重新生成排期</button>
+    </section>
+    <section id="pageView" class="view">
+      <div class="section-heading"><div><span class="kicker">PAGE BRIDGE</span><h2>连接当前页面</h2></div><span id="pageBadge" class="count-pill">未连接</span></div>
+      <div id="pageInfo" class="page-card empty">打开番茄作者后台的章节编辑页，然后点击下面的按钮。</div><button id="inspectButton" class="button secondary" type="button">识别当前页面</button><button id="fillButton" class="button primary" type="button" disabled>填写下一章</button><p class="hint">扩展只负责填写，不会替你点击发布。请检查标题、正文和定时日期后再提交。</p><details class="debug-details"><summary>页面识别详情</summary><pre id="debugOutput"></pre></details>
+    </section>
+  </main>
+  <footer><button id="prevButton" class="text-button" type="button">← 上一步</button><span id="footerStatus">本地模式</span><button id="nextButton" class="text-button" type="button">下一步 →</button></footer>
+  <script src="sidepanel.js"></script>
+</body>
+</html>
