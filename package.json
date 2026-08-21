@@ -1,6 +1,6 @@
 {
   "name": "tomato-uploader-assistant",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "private": true,
   "type": "module",
   "description": "本地运行的番茄小说章节上传助手，支持 TXT 解析、发布排期和断点续传",

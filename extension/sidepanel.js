@@ -35,32 +35,39 @@ function appendChaptersFromText(chapters, fileName, text) {
 }
 
 async function readTextFile(file, fileName, totalBytes) { if (file.size > LIMITS.maxFileBytes) throw new Error(`${fileName} 超过单文件 10 MB 限制`); if (totalBytes + file.size > LIMITS.maxTotalBytes) throw new Error('正文总大小超过 30 MB 限制'); return { fileName, text: await file.text(), bytes: file.size }; }
-async function processFiles(fileEntries, label) { if (!fileEntries.length) { state.chapters = []; state.schedule = []; renderChapters(); renderSchedule(); $('sourceStatus').textContent = '没有读取到 TXT 文件。'; setFooter('没有读取到 TXT'); return; } state.cancelled = false; state.chapters = []; let totalBytes = 0; const skipped = []; $('novelFiles').disabled = true; $('directoryButton').disabled = true; $('cancelButton').hidden = false; try { for (let index = 0; index < fileEntries.length; index++) { if (state.cancelled) break; if (index >= LIMITS.maxFiles) { skipped.push('超过最多 2000 个文件'); break; } const entry = fileEntries[index]; try { const result = await readTextFile(entry.file, entry.name, totalBytes); totalBytes += result.bytes; appendChaptersFromText(state.chapters, result.fileName, result.text); } catch (error) { skipped.push(error.message); } $('sourceStatus').textContent = `${label}：${index + 1}/${fileEntries.length} 个文件，已识别 ${state.chapters.length} 章`; await nextFrame(); } state.chapters.sort((a, b) => (a.number || Number.MAX_SAFE_INTEGER) - (b.number || Number.MAX_SAFE_INTEGER) || a.source.localeCompare(b.source, 'zh-CN', { numeric: true })); state.schedule = computeSchedule(state.chapters); renderChapters(); renderSchedule(); $('sourceStatus').textContent = state.cancelled ? `已取消，保留 ${state.chapters.length} 章。` : `已扫描 ${fileEntries.length} 个 TXT，识别 ${state.chapters.length} 章，待上传 ${state.schedule.length} 章。`; setFooter(state.cancelled ? '读取已取消' : '章节已解析'); if (skipped.length) console.warn('[Tomato Uploader Assistant] skipped files', skipped.slice(0, 20)); } finally { $('novelFiles').disabled = false; $('directoryButton').disabled = false; $('cancelButton').hidden = true; } }
+async function processDirectoryHandle(directoryHandle) {
+  state.cancelled = false; state.chapters = []; let totalBytes = 0; let fileCount = 0; const skipped = [];
+  $('novelFiles').disabled = true; $('directoryButton').disabled = true; $('cancelButton').hidden = false;
+  async function walk(handle, prefix = '') {
+    for await (const [name, entry] of handle.entries()) {
+      if (state.cancelled || fileCount >= LIMITS.maxFiles) return;
+      const relativeName = prefix ? `${prefix}/${name}` : name;
+      if (entry.kind === 'directory') { await walk(entry, relativeName); continue; }
+      if (!/\.txt$/i.test(name)) continue;
+      fileCount++;
+      try { const file = await entry.getFile(); const result = await readTextFile(file, relativeName, totalBytes); totalBytes += result.bytes; appendChaptersFromText(state.chapters, result.fileName, result.text); }
+      catch (error) { skipped.push(error.message); }
+      $('sourceStatus').textContent = `正在读取目录：${fileCount} 个 TXT，已识别 ${state.chapters.length} 章`;
+      await nextFrame();
+    }
+  }
+  try {
+    await walk(directoryHandle);
+    state.chapters.sort((a, b) => (a.number || Number.MAX_SAFE_INTEGER) - (b.number || Number.MAX_SAFE_INTEGER) || a.source.localeCompare(b.source, 'zh-CN', { numeric: true }));
+    state.schedule = computeSchedule(state.chapters); renderChapters(); renderSchedule();
+    $('sourceStatus').textContent = state.cancelled ? `已取消，保留 ${state.chapters.length} 章。` : `已扫描 ${fileCount} 个 TXT，识别 ${state.chapters.length} 章，待上传 ${state.schedule.length} 章。`;
+    setFooter(state.cancelled ? '读取已取消' : '章节已解析');
+    if (skipped.length) console.warn('[Tomato Uploader Assistant] skipped files', skipped.slice(0, 20));
+  } finally { $('novelFiles').disabled = false; $('directoryButton').disabled = false; $('cancelButton').hidden = true; }
+}
+async function processFiles(fileEntries, label) { if (!fileEntries.length) { state.chapters = []; state.schedule = []; renderChapters(); renderSchedule(); $('sourceStatus').textContent = '所选目录没有返回 TXT 文件，请确认 TXT 位于该目录或子目录中。'; setFooter('没有读取到 TXT'); return; } state.cancelled = false; state.chapters = []; let totalBytes = 0; const skipped = []; $('novelFiles').disabled = true; $('directoryButton').disabled = true; $('cancelButton').hidden = false; try { for (let index = 0; index < fileEntries.length; index++) { if (state.cancelled) break; if (index >= LIMITS.maxFiles) { skipped.push('超过最多 2000 个文件'); break; } const entry = fileEntries[index]; try { const result = await readTextFile(entry.file, entry.name, totalBytes); totalBytes += result.bytes; appendChaptersFromText(state.chapters, result.fileName, result.text); } catch (error) { skipped.push(error.message); } $('sourceStatus').textContent = `${label}：${index + 1}/${fileEntries.length} 个文件，已识别 ${state.chapters.length} 章`; await nextFrame(); } state.chapters.sort((a, b) => (a.number || Number.MAX_SAFE_INTEGER) - (b.number || Number.MAX_SAFE_INTEGER) || a.source.localeCompare(b.source, 'zh-CN', { numeric: true })); state.schedule = computeSchedule(state.chapters); renderChapters(); renderSchedule(); $('sourceStatus').textContent = state.cancelled ? `已取消，保留 ${state.chapters.length} 章。` : `已扫描 ${fileEntries.length} 个 TXT，识别 ${state.chapters.length} 章，待上传 ${state.schedule.length} 章。`; setFooter(state.cancelled ? '读取已取消' : '章节已解析'); if (skipped.length) console.warn('[Tomato Uploader Assistant] skipped files', skipped.slice(0, 20)); } finally { $('novelFiles').disabled = false; $('directoryButton').disabled = false; $('cancelButton').hidden = true; } }
 
 function computeSchedule(chapters) { const startChapter = Math.max(1, Number($('startChapter').value) || 1); const selected = chapters.filter((chapter) => !chapter.number || chapter.number >= startChapter); const dailyLimit = Math.max(1, Number($('dailyWordLimit').value) || 10000); const chapterLimit = Math.max(1, Number($('dailyChapterLimit').value) || 3); const start = $('startDate').value ? new Date(`${$('startDate').value}T00:00:00`) : new Date(); const [hours, minutes] = ($('dailyPublishTime').value || '07:00').split(':').map(Number); let day = new Date(start); let words = 0; let count = 0; return selected.map((chapter) => { if (count >= chapterLimit || (words + chapter.chars > dailyLimit && words > 0)) { day = addDays(day, 1); words = 0; count = 0; } const date = new Date(day); date.setHours(hours, minutes, 0, 0); words += chapter.chars; count++; return { ...chapter, date: fmtDate(date), time: fmtTime(date) }; }); }
 function renderChapters() { $('chapterCount').textContent = `${state.schedule.length} 章`; $('chapterPreview').innerHTML = state.schedule.slice(0, 30).map((chapter, index) => `<div class="preview-item"><span class="index">${String(index + 1).padStart(2, '0')}</span><span class="title">${escapeHtml(chapter.title)}</span><small>${chapter.chars} 字</small></div>`).join(''); if (state.schedule.length > 30) $('chapterPreview').insertAdjacentHTML('beforeend', `<p class="status-line">仅显示前 30 章，实际待上传 ${state.schedule.length} 章。</p>`); $('nextButton').disabled = steps.indexOf(state.step) === steps.length - 1 || !state.schedule.length; }
 function renderSchedule() { const days = new Set(state.schedule.map((chapter) => chapter.date)); $('dayCount').textContent = `${days.size} 天`; const totalChars = state.schedule.reduce((sum, chapter) => sum + chapter.chars, 0); $('scheduleSummary').className = 'summary-card'; $('scheduleSummary').innerHTML = `<strong>${state.schedule.length} 章</strong><span>${totalChars} 字 · ${days.size} 天完成 · 从第 ${$('startChapter').value || 1} 章开始</span>`; $('scheduleList').innerHTML = state.schedule.slice(0, 60).map((chapter) => `<div class="schedule-item"><span class="date">${chapter.date}</span><span class="title">${escapeHtml(chapter.title)}</span><small>${chapter.time}</small></div>`).join(''); }
 async function sendToPage(message) { const [tab] = await chrome.tabs.query({ active: true, currentWindow: true }); if (!tab?.id || !/^https:\/\/(fanqienovel\.com|writer\.fanqienovel\.com)\//.test(tab.url || '')) throw new Error('当前标签页不是番茄作者后台页面。'); return chrome.tabs.sendMessage(tab.id, message); }
 async function selectIndividualFiles(event) { await processFiles([...event.target.files].filter((file) => /\.txt$/i.test(file.name)).map((file) => ({ file, name: file.name })), '正在读取文件'); event.target.value = ''; }
-function normalizeServerChapter(chapter) { const title = cleanChapterTitle(chapter.title); const content = removeLeadingDuplicateTitle(chapter.content, title); return { title, number: parseChapterNumber(title), content, chars: (content.match(/[一-鿿]/g) || []).length, source: chapter.source || '', volume: chapter.volume || '' }; }
-async function selectDirectory() {
-  $('directoryButton').disabled = true;
-  $('sourceStatus').textContent = '正在连接本地助手，请在弹出的窗口中选择正文目录…';
-  setFooter('等待选择目录');
-  try {
-    const response = await fetch('http://127.0.0.1:4321/api/extension/scan-directory', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
-    const result = await response.json();
-    if (!response.ok) throw new Error(result.error || `本地助手返回 HTTP ${response.status}`);
-    if (result.cancelled) { $('sourceStatus').textContent = '已取消选择目录。'; setFooter('未选择目录'); return; }
-    state.chapters = (result.chapters || []).map(normalizeServerChapter).sort((a, b) => (a.number || Number.MAX_SAFE_INTEGER) - (b.number || Number.MAX_SAFE_INTEGER) || a.source.localeCompare(b.source, 'zh-CN', { numeric: true }));
-    state.schedule = computeSchedule(state.chapters); renderChapters(); renderSchedule();
-    $('sourceStatus').textContent = `已由本地助手扫描 ${state.chapters.length} 章，待上传 ${state.schedule.length} 章。`;
-    setFooter('章节已解析');
-  } catch (error) {
-    $('sourceStatus').textContent = `无法连接本地助手：${error.message}。请先双击 start.bat，再重新选择目录。`;
-    setFooter('本地助手未启动');
-  } finally { $('directoryButton').disabled = false; }
-}
+async function selectDirectory() { if (!window.showDirectoryPicker) { $('sourceStatus').textContent = '当前 Chrome 不支持安全的目录读取 API，请升级 Chrome 120 或更高版本。'; setFooter('浏览器版本过低'); return; } try { $('sourceStatus').textContent = '请选择正文目录…'; const directory = await window.showDirectoryPicker({ mode: 'read' }); await processDirectoryHandle(directory); } catch (error) { if (error?.name !== 'AbortError') { $('sourceStatus').textContent = `目录读取失败：${error.message}`; setFooter('读取失败'); } } }
 
 $('novelFiles').addEventListener('change', selectIndividualFiles); $('directoryButton').addEventListener('click', selectDirectory); $('cancelButton').addEventListener('click', () => { state.cancelled = true; setFooter('正在停止读取…'); }); $('scheduleButton').addEventListener('click', () => { state.schedule = computeSchedule(state.chapters); renderChapters(); renderSchedule(); setFooter('排期已更新'); });
 $('startChapter').addEventListener('change', () => { state.schedule = computeSchedule(state.chapters); renderChapters(); renderSchedule(); chrome.storage.local.set({ startChapter: $('startChapter').value }); });

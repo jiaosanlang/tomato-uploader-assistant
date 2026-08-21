@@ -24,12 +24,7 @@ engine.on('status', (s) => broadcast('status', s));
 
 function sendJson(res, code, obj) {
   const body = JSON.stringify(obj);
-  res.writeHead(code, {
-    'Content-Type': 'application/json; charset=utf-8',
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type',
-  });
+  res.writeHead(code, { 'Content-Type': 'application/json; charset=utf-8' });
   res.end(body);
 }
 function readBody(req) {
@@ -110,14 +105,6 @@ const server = http.createServer(async (req, res) => {
   const p = url.pathname;
 
   try {
-    if (req.method === 'OPTIONS') {
-      res.writeHead(204, {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type',
-      });
-      return res.end();
-    }
     if (p === '/api/events') {
       res.writeHead(200, {
         'Content-Type': 'text/event-stream; charset=utf-8',
@@ -147,25 +134,6 @@ const server = http.createServer(async (req, res) => {
       }
       const selectedPath = await chooseLocalPath(kind);
       return sendJson(res, 200, { path: selectedPath });
-    }
-    if (p === '/api/extension/scan-directory' && req.method === 'POST') {
-      const requestBody = await readBody(req);
-      const selectedPath = String(requestBody.path || '').trim() || await chooseLocalPath('directory');
-      if (!selectedPath) return sendJson(res, 200, { cancelled: true, chapters: [] });
-      const book = parseNovel(selectedPath, { stripMetaLines: true });
-      const chapters = book.volumes.flatMap((volume) => volume.chapters.map((chapter) => ({
-        title: chapter.title,
-        content: chapter.content,
-        chars: chapter.chars,
-        source: chapter.sourceFile,
-        volume: volume.name,
-      })));
-      return sendJson(res, 200, {
-        path: selectedPath,
-        bookName: book.bookName,
-        sourceType: book.sourceType,
-        chapters,
-      });
     }
     if (p === '/api/parse' && req.method === 'POST') {
       const cfg = normalizeConfig(await readBody(req));
