@@ -8,7 +8,7 @@
 </head>
 <body>
   <header class="masthead">
-    <div><p class="eyebrow">WRITER DESK / 0.3.1</p><h1>番茄上传助手</h1><p class="subhead">把章节整理好，再交给页面完成最后一步。</p></div>
+    <div><p class="eyebrow">WRITER DESK / 0.3.2</p><h1>番茄上传助手</h1><p class="subhead">把章节整理好，再交给页面完成最后一步。</p></div>
     <span id="connectionDot" class="connection-dot" title="等待当前页面"></span>
   </header>
   <main>
@@ -19,7 +19,7 @@
     </section>
     <section id="sourceView" class="view active">
       <div class="section-heading"><div><span class="kicker">SOURCE</span><h2>先把正文放进来</h2></div><span id="chapterCount" class="count-pill">0 章</span></div>
-      <div class="dropzone"><span class="drop-icon">↗</span><strong>选择 TXT 文件或正文目录</strong><small>纯 Chrome 模式：逐个读取目录中的 TXT，不需要启动其他程序。</small><div class="source-buttons"><button id="directoryButton" type="button">选择正文目录</button><label for="novelFiles">选择 TXT<input id="novelFiles" type="file" accept=".txt,text/plain" multiple></label></div></div>
+      <div class="dropzone"><span class="drop-icon">↗</span><strong>选择 TXT 文件或正文目录</strong><small>选择目录后自动扫描该目录及子目录中的全部 TXT。</small><div class="source-buttons"><label class="directory-button" for="novelDirectory">选择正文目录<input id="novelDirectory" type="file" multiple webkitdirectory directory></label><label for="novelFiles">选择 TXT<input id="novelFiles" type="file" accept=".txt,text/plain" multiple></label></div></div>
       <div class="mini-grid">
         <label>每日字数上限<input id="dailyWordLimit" type="number" min="1" value="10000"></label>
         <label>每日最多几章<input id="dailyChapterLimit" type="number" min="1" max="20" value="3"></label>
