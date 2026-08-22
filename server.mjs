@@ -11,6 +11,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const WEB = path.join(__dirname, 'web');
 const CONFIG = path.join(__dirname, 'config.json');
 const PORT = Number(process.env.PORT || 4321);
+const EXTENSION_LIMITS = { maxFiles: 2000, maxFileBytes: 10 * 1024 * 1024, maxTotalBytes: 30 * 1024 * 1024 };
 
 const engine = new UploadEngine();
 const sseClients = new Set();
@@ -25,6 +26,19 @@ engine.on('status', (s) => broadcast('status', s));
 function sendJson(res, code, obj) {
   const body = JSON.stringify(obj);
   res.writeHead(code, { 'Content-Type': 'application/json; charset=utf-8' });
+  res.end(body);
+}
+function extensionOrigin(req) {
+  const origin = String(req.headers.origin || '');
+  return /^chrome-extension:\/\/[a-p]{32}$/.test(origin) ? origin : '';
+}
+function sendExtensionJson(req, res, code, obj) {
+  const origin = extensionOrigin(req);
+  const body = JSON.stringify(obj);
+  res.writeHead(code, {
+    'Content-Type': 'application/json; charset=utf-8',
+    ...(origin ? { 'Access-Control-Allow-Origin': origin, Vary: 'Origin' } : {}),
+  });
   res.end(body);
 }
 function readBody(req) {
@@ -100,11 +114,47 @@ function chooseLocalPath(kind) {
   });
 }
 
+function validateExtensionDirectory(rootPath) {
+  const totals = { files: 0, bytes: 0 };
+  const walk = (dirPath) => {
+    for (const entry of fs.readdirSync(dirPath, { withFileTypes: true })) {
+      const fullPath = path.join(dirPath, entry.name);
+      if (entry.isDirectory()) { walk(fullPath); continue; }
+      if (!entry.isFile() || !/\.txt$/i.test(entry.name) || entry.name.startsWith('~$')) continue;
+      const bytes = fs.statSync(fullPath).size;
+      totals.files++;
+      totals.bytes += bytes;
+      if (totals.files > EXTENSION_LIMITS.maxFiles) throw new Error('正文目录超过 2000 个 TXT 的安全限制。');
+      if (bytes > EXTENSION_LIMITS.maxFileBytes) throw new Error(`${entry.name} 超过单文件 10 MB 的安全限制。`);
+      if (totals.bytes > EXTENSION_LIMITS.maxTotalBytes) throw new Error('正文目录超过总计 30 MB 的安全限制。');
+    }
+  };
+  walk(rootPath);
+  if (!totals.files) throw new Error('所选文件夹及其子文件夹中没有找到 TXT 文件。');
+  return totals;
+}
+
+function numericChapterNumber(title) {
+  const digits = String(title || '').match(/^第\s*([0-9０-９]+)\s*[章节回]/)?.[1] || '';
+  return Number(digits.replace(/[０-９]/g, (char) => String.fromCharCode(char.charCodeAt(0) - 0xfee0))) || 0;
+}
+
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, 'http://localhost');
   const p = url.pathname;
 
   try {
+    if (p === '/api/extension/scan-directory' && req.method === 'OPTIONS') {
+      const origin = extensionOrigin(req);
+      if (!origin) return sendJson(res, 403, { error: '仅允许 Chrome 扩展访问。' });
+      res.writeHead(204, {
+        'Access-Control-Allow-Origin': origin,
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type',
+        Vary: 'Origin',
+      });
+      return res.end();
+    }
     if (p === '/api/events') {
       res.writeHead(200, {
         'Content-Type': 'text/event-stream; charset=utf-8',
@@ -134,6 +184,28 @@ const server = http.createServer(async (req, res) => {
       }
       const selectedPath = await chooseLocalPath(kind);
       return sendJson(res, 200, { path: selectedPath });
+    }
+    if (p === '/api/extension/scan-directory' && req.method === 'POST') {
+      if (!extensionOrigin(req)) return sendJson(res, 403, { error: '仅允许 Chrome 扩展访问。' });
+      const { startChapter: requestedStart } = await readBody(req);
+      const startChapter = Math.max(1, Number(requestedStart) || 1);
+      const selectedPath = await chooseLocalPath('directory');
+      if (!selectedPath) return sendExtensionJson(req, res, 200, { cancelled: true, chapters: [] });
+      const totals = validateExtensionDirectory(selectedPath);
+      const book = parseNovel(selectedPath, { stripMetaLines: true });
+      let sourceIndex = 0;
+      const chapters = book.volumes.flatMap((volume) => volume.chapters.map((chapter) => {
+        const ordinal = ++sourceIndex;
+        const number = numericChapterNumber(chapter.title) || ordinal;
+        return { title: chapter.title, content: chapter.content, chars: chapter.chars, number, source: chapter.sourceFile, volume: volume.name };
+      })).filter((chapter) => chapter.number >= startChapter);
+      return sendExtensionJson(req, res, 200, {
+        bookName: book.bookName,
+        startChapter,
+        scannedFiles: totals.files,
+        scannedBytes: totals.bytes,
+        chapters,
+      });
     }
     if (p === '/api/parse' && req.method === 'POST') {
       const cfg = normalizeConfig(await readBody(req));
@@ -198,6 +270,7 @@ const server = http.createServer(async (req, res) => {
     if (p.startsWith('/api/')) return sendJson(res, 404, { error: 'no route' });
     return serveStatic(res, p);
   } catch (e) {
+    if (p === '/api/extension/scan-directory') return sendExtensionJson(req, res, 500, { error: e.message });
     return sendJson(res, 500, { error: e.message });
   }
 });

@@ -32,7 +32,9 @@
 4. 选择本仓库的 `extension` 文件夹
 5. 固定扩展图标，打开侧边栏开始使用
 
-扩展是纯 Chrome 插件，不需要启动 `start.bat`，也不会访问本地 Node 服务。选择目录后，扩展会逐个读取其中的 TXT，清理 BOM、重复章节标题、Markdown 标题符号和多余空格，并可从指定章节开始生成排期。
+为避免部分 Windows/Chrome 组合在侧边栏直接读取目录时发生浏览器级崩溃，目录选择和递归扫描由本地助手完成。使用目录功能前先双击 `start-extension-helper.bat`，再在扩展中点击“选择正文目录”。本地助手会先执行文件数量与容量检查，并按指定的起始章节过滤后再把章节交给扩展。
+
+单独选择少量 TXT 时不需要启动本地助手。扩展与本地助手都只监听或访问本机数据，不会把正文发送到额外的第三方服务。
 
 ## 安装要求
 
@@ -98,6 +100,7 @@ web/                可视化操作页面
 extension/          Chrome Manifest V3 侧边栏实验版
 config.example.json 安全的配置示例
 start.bat           Windows 启动脚本
+start-extension-helper.bat Chrome 扩展目录扫描助手启动脚本
 ```
 
 ## 开发状态
